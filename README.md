@@ -1,0 +1,2 @@
+# discordfaq
+Discord FAQ bot
