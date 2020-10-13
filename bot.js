@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 require("dotenv").config();
 
 var sqlite3 = require("sqlite3").verbose();
@@ -26,7 +28,7 @@ client.on("message", msg=>{
     //msg.delete();
     //msg.reply("pong");
     var command = msg.content.split(" ");
-    var serverid = msg.guild.id;
+    var serverid = msg.guild.id || 0;
     if (!serverid) {
       console.log("no server id");
       return;
@@ -50,7 +52,7 @@ client.on("message", msg=>{
             } else {
               db.run("INSERT INTO `data`(`name`,`data`, `tags`,`author`,`server`) VALUES (?,?,?,?,?)",[name,text,tags,msg.author.username,serverid],err=>{
                 if (err === null) {
-                  msg.reply("ERFOLG! 100 Punkte!");
+                  msg.reply("ERFOLG! 42 Punkte!");
                   return;
                 } else {
                   console.log("error inserting element into db",err);
@@ -95,6 +97,7 @@ client.on("message", msg=>{
                 .addField("Tags:",result[0].tags)
                 .setFooter("FAQ-Bot von Julian Ullrich");
               msg.reply(reply);
+	      msg.delete();
             } else {
               msg.reply("Der Eintrag existiert leider nicht *sad bot noise*");
             }
@@ -159,6 +162,40 @@ client.on("message", msg=>{
           }
         });
         break;
+
+      case "leaderboard":
+	console.log("getting leaderboard");
+	db.all("SELECT * FROM `data` WHERE `server` = ?",[serverid],(err,result) => {
+	  if (err) {
+	    console.log("error getting data from database",err);
+            msg.reply("Fehler beim durchsuchen der Datenbank :(");
+          } else {
+              var reply = new Discord.MessageEmbed().setColor("#0099ff")
+                .setTitle(`FAQ-Leaderboard:`)
+                .setFooter("FAQ-Bot von Julian Ullrich");
+              var response = [];
+              if (result.length > 0){
+                //reply.addField("Name","Tags");
+		var list = {};
+                result.forEach(e=>{
+                  //reply.addField(e.name,(e.tags)?e.tags:"-",true);
+		  if (!list.hasOwnProperty(e.author)) list[e.author] = 0;
+		  list[e.author] += 42;
+                })
+
+		for (var n in list) response.push(`\`${n} - ${list[n]}\``);
+
+                reply.addField("Ergebnis:",response.join("\n"));
+              } else {
+                reply.addField("Suche:","Keine passenden Einträge gefunden. Schade :(");
+              }
+
+              msg.reply(reply);
+
+          }
+        });
+        break;
+	    
         
         
 
@@ -169,7 +206,7 @@ client.on("message", msg=>{
           .setFooter("FAQ-Bot von Julian Ullrich");
 
         reply.addFields({name:"Beschreibung",value:"Dieser Bot wurde extra nur für euch geschrieben.\nHiermit könnt ihr FAQ-Einträge speichern, suchen und anzeigen lassen."},
-          {name:"Befehle",value:"```!faq set foo foo,bar Schöner Text - Schreibt den FAQ-Eintrag 'foo' mit dem Text 'Schöner Text' und den Tags 'foo,bar'\n\n!faq get foo - Gibt den FAQ-Eintrag mit dem Namen 'foo' zurück.\n\n!faq find query - Sucht in allen Namen und Tags nach dem angegebenen Wort (nur ein einzelnes Wort).\n\n!faq list - Gibt eine Liste aller FAQ-Einträge mit ihrern Tags aus.```"});
+          {name:"Befehle",value:"```!faq set SchönerTitel tag1,tag2,tag3 Schöner Text - Schreibt den FAQ-Eintrag 'SchönerTitel'(ohne Leerzeichen) mit dem Text 'Schöner Text' und den Tags 'tag1,tag2,tag3'\n\n!faq get foo - Gibt den FAQ-Eintrag mit dem Namen 'foo' zurück.\n\n!faq find query - Sucht in allen Namen und Tags nach dem angegebenen Wort (nur ein einzelnes Wort).\n\n!faq list - Gibt eine Liste aller FAQ-Einträge mit ihren Tags aus.\n\n!faq leaderboard - Gibt ein Leaderboard von allen FAQ-Schreibern zurück. Jeder Eintrag bringt 42 Punkte. Warum? Ist halt so.```"});
 
         msg.reply(reply);
         break;
